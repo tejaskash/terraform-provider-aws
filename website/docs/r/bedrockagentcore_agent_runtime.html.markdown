@@ -8,7 +8,7 @@ description: |-
 
 # Resource: aws_bedrockagentcore_agent_runtime
 
-Manages an AWS Bedrock AgentCore Agent Runtime. Agent Runtime provides a containerized execution environment for AI agents.
+Manages an AWS Bedrock AgentCore Agent Runtime. Agent Runtime provides an execution environment for AI agents using either container images or direct code deployments stored in Amazon S3.
 
 ## Example Usage
 
@@ -106,13 +106,40 @@ resource "aws_bedrockagentcore_agent_runtime" "example" {
 }
 ```
 
+### Direct Code Deployment
+
+```terraform
+resource "aws_bedrockagentcore_agent_runtime" "example" {
+  agent_runtime_name = "example_agent_runtime"
+  role_arn           = aws_iam_role.example.arn
+
+  agent_runtime_artifact {
+    code_configuration {
+      runtime     = "PYTHON_3_10"
+      entry_point = ["app.handler"]
+
+      code {
+        s3 {
+          bucket = "example-runtime-artifacts"
+          prefix = "code/runtime.zip"
+        }
+      }
+    }
+  }
+
+  network_configuration {
+    network_mode = "PUBLIC"
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are required:
 
 * `agent_runtime_name` - (Required) Name of the agent runtime.
 * `role_arn` - (Required) ARN of the IAM role that the agent runtime assumes to access AWS services.
-* `agent_runtime_artifact` - (Required) Container artifact configuration. See [`agent_runtime_artifact`](#agent-runtime-artifact) below.
+* `agent_runtime_artifact` - (Required) Artifact configuration. See [`agent_runtime_artifact`](#agent-runtime-artifact) below.
 * `network_configuration` - (Required) Network configuration for the agent runtime. See [`network_configuration`](#network_configuration) below.
 
 The following arguments are optional:
@@ -128,9 +155,32 @@ The following arguments are optional:
 
 ### `agent_runtime_artifact`
 
-The `agent_runtime_artifact` block supports the following:
+Exactly one of the following must be specified in the `agent_runtime_artifact` block:
 
-* `container_configuration` - (Required) Container configuration block. See [`container_configuration`](#container_configuration) below.
+* `code_configuration` - (Optional) Direct code deployment configuration block. See [`code_configuration`](#code_configuration) below.
+* `container_configuration` - (Optional) Container configuration block. See [`container_configuration`](#container_configuration) below.
+
+### `code_configuration`
+
+The `code_configuration` block supports the following:
+
+* `entry_point` - (Required) Ordered list defining the runtime entry point for the deployed code.
+* `runtime` - (Required) Managed runtime the code executes in. Valid values include `PYTHON_3_10`, `NODEJS_18`, and other values supported by Amazon Bedrock AgentCore.
+* `code` - (Required) Code source configuration block. See [`code`](#code) below.
+
+### `code`
+
+The `code` block supports the following:
+
+* `s3` - (Required) Amazon S3 location for the uploaded code artifact. See [`s3`](#s3) below.
+
+### `s3`
+
+The `s3` block supports the following:
+
+* `bucket` - (Required) Name of the Amazon S3 bucket that stores the agent runtime code artifact.
+* `prefix` - (Required) Object key prefix (including file name) that points to the code artifact inside the bucket.
+* `version_id` - (Optional) Specific version of the S3 object to deploy. If omitted, the latest object version is used.
 
 ### `container_configuration`
 
